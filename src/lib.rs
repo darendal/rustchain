@@ -1,9 +1,9 @@
+extern crate chrono;
+extern crate crypto;
+extern crate serde;
 #[macro_use]
 extern crate serde_derive;
-extern crate chrono;
-extern crate serde;
 extern crate serde_json;
-extern crate crypto;
 
 use block::Block;
 use std::fs;
@@ -26,6 +26,7 @@ impl fmt::Display for Chain {
 }
 
 impl Chain {
+    /// Creates a new chain, generating blocks from existing filesystem blocks
     pub fn new() -> Chain {
         bootstrap_chaindata();
         let mut chain = Chain {
@@ -35,6 +36,7 @@ impl Chain {
         return chain;
     }
 
+    /// Synchronizes this chain with blocks in the filesystem
     pub fn sync(&mut self) {
         let path = Path::new(CHAIN_DIR);
         let mut node_blocks: Vec<Block> = Vec::default();
@@ -46,27 +48,46 @@ impl Chain {
             }
         }
         node_blocks.sort();
+
+        {
+            let mut last: Option<&Block> = None;
+            for x in node_blocks.iter() {
+                match last {
+                    Some(prev) => {
+                        assert_eq!(prev.hash, x.prev_hash);
+                        last = Some(x);
+                    },
+                    None => last = Some(x)
+                }
+            }
+        }
+
+
         self.node_blocks = node_blocks;
     }
 
+    /// Uses the latest block in the chain to generate a new Block,
+    /// which is then added to the chain
     pub fn mine(&mut self) {
-
         // start with empty block
-        let mut new_block = Block::default(); 
-        
+        let mut new_block = Block::default();
+
         // Open new scope so we can immutably borrow last_block
         {
             let last_block = self.node_blocks.iter().max().unwrap();
 
-            new_block = last_block.mine();
+            new_block = last_block.mine_block();
+
+            assert_eq!(last_block.hash, new_block.prev_hash);
         }
-        
+
         // ...and then give up the borrow to add the new block to the chain
         new_block.save(Path::new(CHAIN_DIR));
         self.node_blocks.push(new_block);
     }
 }
 
+/// Creates the chaindata folder and an initial block if not already present
 fn bootstrap_chaindata() {
     let path = Path::new(CHAIN_DIR);
 

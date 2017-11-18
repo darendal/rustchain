@@ -15,8 +15,6 @@ fn main() {
 
     let mut chain = Chain::new();
 
-    println!("{:?}", chain );
-
     chain.mine();
 
     let mut router = Router::new();

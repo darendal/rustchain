@@ -17,12 +17,14 @@ const NUM_ZEROS: usize = 4;
 pub struct Block {
     pub index: u32,
     timestamp: DateTime<Utc>,
-    prev_hash: String,
+    pub prev_hash: String,
     pub hash: String,
     data: String,
 }
 
 impl Block {
+
+    /// Creates an empty Block
     pub fn default() -> Block {
         Block{
             index: 0,
@@ -32,6 +34,8 @@ impl Block {
             data: String::default()
         }
     }
+
+    /// Creates a new Block with a valid header
     pub fn new(index: u32, timestamp: DateTime<Utc>, prev_hash: String, data: String) -> Block {
         let mut block = Block {
             index,
@@ -44,6 +48,8 @@ impl Block {
         return block;
     }
 
+    /// Creates the first block in the chain
+    /// and ensures its header is correct
     pub fn create_first_block() -> Block {
         Block::new(
             0,
@@ -53,6 +59,7 @@ impl Block {
         )
     }
 
+    /// Save the Block to the filesystem
     pub fn save(&self, path: &Path) -> Result<(), Box<Error>> {
         // Add block to path
         let mut path = PathBuf::from(path);
@@ -67,14 +74,17 @@ impl Block {
         Ok(())
     }
 
+    /// Returns a JSON representation of the Block
     pub fn serialize(&self) -> String {
         return serde_json::to_string(&self).expect("Error serializing block");
     }
 
+    /// Converts a JSON string into a Block
     pub fn deserialize(contents: &str) -> Block {
         serde_json::from_str(&contents.to_string()).unwrap()
     }
 
+    /// Read the file at the given path and deserialize it into a Block
     pub fn read_from_file(entry: &Path) -> Block {
         let mut file = File::open(entry).unwrap();
 
@@ -82,9 +92,12 @@ impl Block {
 
         file.read_to_string(&mut contents);
 
-        Block::deserialize(&contents.to_string())
+        let b = Block::deserialize(&contents.to_string());
+
+        return b;
     }
 
+    /// Generate the blocks header.
     fn generate_header(&self, nonce: usize) -> String {
         format!(
             "{}{}{}{}{}",
@@ -96,6 +109,7 @@ impl Block {
         )
     }
 
+    /// Generate this block's hash, using a nonce to check preceding 0's
     fn calculate_hash(&self) -> String {
         let mut nonce = 0;
         let comparable = String::from_utf8(vec![b'0';NUM_ZEROS]).unwrap();
@@ -116,13 +130,22 @@ impl Block {
         }
     }
 
-    pub fn mine(&self) -> Block {
-        Block::new(
+    /// Use this block's hash to generate a new Block
+    pub fn mine_block(&self) -> Block {
+        let b = Block::new(
             self.index + 1,
             Utc::now(),
             self.hash.clone(),
             format!("I block {}", self.index),
-        )
+        );
+        assert!(b.is_valid());
+        b
+    }
+
+    /// Check if this Block's header is valid
+    /// Currently only checks that the hash has the correct amount of preceding 0's
+    pub fn is_valid(&self) -> bool {
+        &self.hash[0..NUM_ZEROS] == String::from_utf8(vec![b'0';NUM_ZEROS]).unwrap() 
     }
 }
 
@@ -140,6 +163,6 @@ impl PartialOrd for Block {
 
 impl PartialEq for Block {
     fn eq(&self, other: &Block) -> bool {
-        self.hash == other.hash
+        self.hash == other.hash && self.index == other.index
     }
 }
