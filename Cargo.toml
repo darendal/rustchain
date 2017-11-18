@@ -24,3 +24,6 @@ chrono = { version = "0.4", features = ["serde"] }
 
 rust-crypto = "^0.2"
 
+config = "*"
+
+lazy_static = "*"

@@ -1,20 +1,32 @@
-extern crate chrono;
-extern crate crypto;
-extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 extern crate serde_json;
+extern crate chrono;
+extern crate crypto;
+extern crate serde;
+extern crate config;
+#[macro_use]
+extern crate lazy_static;
+
 
 use block::Block;
 use std::fs;
 use std::path::Path;
 use std::fmt;
+use std::cmp::Ordering;
+use settings::Settings;
 
 mod block;
+mod settings;
 
-const CHAIN_DIR: &str = "chaindata";
+lazy_static! {
+    static ref SETTINGS: Settings = {
+        Settings::new().unwrap()
+    };
 
-#[derive(Debug)]
+}
+
+#[derive(Debug, Eq)]
 pub struct Chain {
     pub node_blocks: Vec<Block>,
 }
@@ -38,7 +50,7 @@ impl Chain {
 
     /// Synchronizes this chain with blocks in the filesystem
     pub fn sync(&mut self) {
-        let path = Path::new(CHAIN_DIR);
+        let path = Path::new(&SETTINGS.block_settings.chain_directory);
         let mut node_blocks: Vec<Block> = Vec::default();
 
         for entry in fs::read_dir(path).unwrap() {
@@ -56,7 +68,7 @@ impl Chain {
                     Some(prev) => {
                         assert_eq!(prev.hash, x.prev_hash);
                         last = Some(x);
-                    },
+                    }
                     None => last = Some(x)
                 }
             }
@@ -70,7 +82,7 @@ impl Chain {
     /// which is then added to the chain
     pub fn mine(&mut self) {
         // start with empty block
-        let mut new_block = Block::default();
+        let new_block : Block;
 
         // Open new scope so we can immutably borrow last_block
         {
@@ -79,17 +91,18 @@ impl Chain {
             new_block = last_block.mine_block();
 
             assert_eq!(last_block.hash, new_block.prev_hash);
+            assert_eq!(last_block.index, new_block.index - 1);
         }
 
         // ...and then give up the borrow to add the new block to the chain
-        new_block.save(Path::new(CHAIN_DIR));
+        new_block.save(Path::new(&SETTINGS.block_settings.chain_directory));
         self.node_blocks.push(new_block);
     }
 }
 
 /// Creates the chaindata folder and an initial block if not already present
 fn bootstrap_chaindata() {
-    let path = Path::new(CHAIN_DIR);
+    let path = Path::new(&SETTINGS.block_settings.chain_directory);
 
     // Create chaindata directory if doesn't exist
     fs::create_dir_all(path).unwrap();
@@ -103,10 +116,46 @@ fn bootstrap_chaindata() {
     }
 }
 
+
+impl Ord for Chain {
+    fn cmp(&self, other: &Chain) -> Ordering {
+        self.node_blocks.len().cmp(&other.node_blocks.len())
+    }
+}
+
+impl PartialOrd for Chain {
+    fn partial_cmp(&self, other: &Chain) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialEq for Chain {
+    fn eq(&self, other: &Chain) -> bool {
+        self.node_blocks.len() == other.node_blocks.len() && self.node_blocks == other.node_blocks
+    }
+}
+
+
 #[cfg(test)]
 mod tests {
+    use super::*;
     #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
+    fn chain_equality() {
+
+        let blocks1 = vec![Block::default(), Block::default()];
+        let blocks2 = vec![Block::default(), Block::default()];
+
+        let mut chain1 = Chain{ node_blocks: blocks1};
+        let mut chain2 = Chain{ node_blocks: blocks2};
+
+        assert_eq!(chain1, chain2);
+
+        chain2.node_blocks.push(Block::default());
+
+        assert_ne!(chain1,chain2);
+
+        chain1.node_blocks.push(Block::create_first_block());
+
+        assert_ne!(chain1, chain2);
     }
 }

@@ -1,0 +1,2 @@
+[block_settings]
+chain_directory = "tests/chaindata"

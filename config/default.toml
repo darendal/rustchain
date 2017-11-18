@@ -1,0 +1,3 @@
+[block_settings]
+number_of_zeroes = 4
+chain_directory = "chaindata"

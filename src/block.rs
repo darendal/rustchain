@@ -9,9 +9,7 @@ use crypto::sha2::Sha256;
 use crypto::digest::Digest;
 use serde_json;
 
-
-const CHAIN_DIR: &str = "chaindata";
-const NUM_ZEROS: usize = 4;
+use super::SETTINGS;
 
 #[derive(Serialize, Deserialize, Debug, Eq)]
 pub struct Block {
@@ -23,10 +21,9 @@ pub struct Block {
 }
 
 impl Block {
-
     /// Creates an empty Block
     pub fn default() -> Block {
-        Block{
+        Block {
             index: 0,
             timestamp: Utc::now(),
             prev_hash: String::default(),
@@ -112,7 +109,7 @@ impl Block {
     /// Generate this block's hash, using a nonce to check preceding 0's
     fn calculate_hash(&self) -> String {
         let mut nonce = 0;
-        let comparable = String::from_utf8(vec![b'0';NUM_ZEROS]).unwrap();
+        let comparable = String::from_utf8(vec![b'0'; SETTINGS.block_settings.number_of_zeroes]).unwrap();
 
         loop {
             let header_string = self.generate_header(nonce);
@@ -122,10 +119,10 @@ impl Block {
 
             let result = sha.result_str();
 
-            if &result[0..NUM_ZEROS] == comparable {
+            if &result[0..SETTINGS.block_settings.number_of_zeroes] == comparable {
                 println!("Found header: {}", result);
                 return result;
-            } 
+            }
             nonce = nonce + 1;
         }
     }
@@ -145,7 +142,7 @@ impl Block {
     /// Check if this Block's header is valid
     /// Currently only checks that the hash has the correct amount of preceding 0's
     pub fn is_valid(&self) -> bool {
-        &self.hash[0..NUM_ZEROS] == String::from_utf8(vec![b'0';NUM_ZEROS]).unwrap() 
+        &self.hash[0..SETTINGS.block_settings.number_of_zeroes] == String::from_utf8(vec![b'0'; SETTINGS.block_settings.number_of_zeroes]).unwrap()
     }
 }
 
