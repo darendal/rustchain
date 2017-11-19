@@ -163,3 +163,92 @@ impl PartialEq for Block {
         self.hash == other.hash && self.index == other.index
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::env;
+
+    #[test]
+    fn block_validity() {
+        let valid = Block {
+            index: 0,
+            prev_hash: String::default(),
+            hash: String::from("0000000000"),
+            timestamp: Utc::now(),
+            data: String::from("Valid")
+        };
+
+        assert!(valid.is_valid());
+
+        let invalid = Block {
+            index: 0,
+            prev_hash: String::default(),
+            hash: String::from("these are some words"),
+            timestamp: Utc::now(),
+            data: String::from("Valid")
+        };
+
+        assert!(!invalid.is_valid());
+    }
+
+    #[test]
+    fn block_equality() {
+
+        // Switch to Test environment to speed up mining
+        env::set_var("RUN_MODE", "test");
+
+        let block_0 = Block::new(
+            0,
+            Utc.timestamp(0,0),
+            String::default(),
+            String::default()
+        );
+
+        let block_0_clone = Block::new(
+            0,
+            Utc.timestamp(0,0),
+            String::default(),
+            String::default()
+        );
+
+        assert_eq!(block_0, block_0_clone);
+
+        let diff_index = Block::new(
+            1,
+            Utc.timestamp(0,0),
+            String::default(),
+            String::default()
+        );
+
+        assert_ne!(block_0, diff_index);
+
+        let diff_timestamp = Block::new(
+            0,
+            Utc.timestamp(100, 100),
+            String::default(),
+            String::default()
+        );
+
+        assert_ne!(block_0, diff_timestamp);
+
+        let diff_prev_hash = Block::new(
+            0,
+            Utc.timestamp(0,0),
+            block_0.hash.clone(),
+            String::default()
+        );
+
+        assert_ne!(block_0, diff_prev_hash);
+
+        let diff_data = Block::new(
+            0,
+            Utc.timestamp(0,0),
+            String::default(),
+            String::from("this is some data")
+        );
+
+        assert_ne!(block_0, diff_data);
+
+    }
+}

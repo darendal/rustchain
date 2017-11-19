@@ -17,13 +17,19 @@ serde_derive = "1.0"
 # but you may be using a different one.
 serde_json = "1.0"
 
+# Rust web microservice framework. Used to iteract and view current chain through the browser
 iron = "*"
 router = "*"
 
+# Used to get current date time
 chrono = { version = "0.4", features = ["serde"] }
 
+# Used for SHA hashing
 rust-crypto = "^0.2"
 
+# Allows configs to be pulled in from a separate file
 config = "*"
 
+# Static allocation of structs, etc.
+# Used to make Settings a 'global' variable
 lazy_static = "*"
