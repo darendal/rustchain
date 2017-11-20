@@ -3,14 +3,15 @@ extern crate router;
 extern crate rustchain;
 
 use rustchain::MinerNode;
-use std::thread;
 
 
 fn main() {
 
-    let main = MinerNode{port: 3001};
+    let mut main = MinerNode::new(3000);
 
     let thread = main.start();
+
+    main.mine_to_size(6);
 
     thread.join();
 

@@ -33,3 +33,5 @@ config = "*"
 # Static allocation of structs, etc.
 # Used to make Settings a 'global' variable
 lazy_static = "*"
+
+reqwest = "*"

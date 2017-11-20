@@ -5,11 +5,11 @@ use std::fmt;
 use std::cmp::Ordering;
 
 use serde_json;
-use super::SETTINGS;
 
 #[derive(Debug, Eq)]
 pub struct BlockChain {
     pub node_blocks: Vec<Block>,
+    chain_dir: String
 }
 
 impl fmt::Display for BlockChain {
@@ -20,18 +20,20 @@ impl fmt::Display for BlockChain {
 
 impl BlockChain {
     /// Creates a new chain, generating blocks from existing filesystem blocks
-    pub fn new() -> BlockChain {
-        bootstrap_chaindata();
+    pub fn new(chain_dir: String) -> BlockChain {
+
         let mut chain = BlockChain {
             node_blocks: Vec::default(),
+            chain_dir: chain_dir.clone()
         };
+        chain.bootstrap_chaindata();
         chain.sync();
         return chain;
     }
 
     /// Synchronizes this chain with blocks in the filesystem
     pub fn sync(&mut self) {
-        let path = Path::new(&SETTINGS.block_settings.chain_directory);
+        let path = Path::new(&self.chain_dir);
         let mut node_blocks: Vec<Block> = Vec::default();
 
         for entry in fs::read_dir(path).unwrap() {
@@ -76,25 +78,37 @@ impl BlockChain {
         }
 
         // ...and then give up the borrow to add the new block to the chain
-        new_block.save(Path::new(&SETTINGS.block_settings.chain_directory));
+        new_block.save(Path::new(&self.chain_dir));
         self.node_blocks.push(new_block);
     }
-}
 
-/// Creates the chaindata folder and an initial block if not already present
-fn bootstrap_chaindata() {
-    let path = Path::new(&SETTINGS.block_settings.chain_directory);
+    /// Creates the chaindata folder and an initial block if not already present
+    fn bootstrap_chaindata(&self) {
+        let path = Path::new(&self.chain_dir);
 
-    // Create chaindata directory if doesn't exist
-    fs::create_dir_all(path).unwrap();
+        // Create chaindata directory if doesn't exist
+        fs::create_dir_all(path).unwrap();
 
-    let any_files = fs::read_dir(path).unwrap().count() > 0;
+        let any_files = fs::read_dir(path).unwrap().count() > 0;
 
-    if !any_files {
-        let first_block = Block::create_first_block();
+        if !any_files {
+            let first_block = Block::create_first_block();
 
-        first_block.save(path);
+            first_block.save(path);
+        }
     }
+
+    pub fn len(&self) -> usize {
+        self.node_blocks.len()
+    }
+
+    pub fn save_chain(&self) {
+        let path = Path::new(&self.chain_dir);
+        self.node_blocks.iter().for_each(|x|{
+            x.save(&path);
+        })
+    }
+
 }
 
 
@@ -126,8 +140,8 @@ mod tests {
         let blocks1 = vec![Block::default(), Block::default()];
         let blocks2 = vec![Block::default(), Block::default()];
 
-        let mut chain1 = BlockChain { node_blocks: blocks1};
-        let mut chain2 = BlockChain { node_blocks: blocks2};
+        let mut chain1 = BlockChain { node_blocks: blocks1, chain_dir: String::default() };
+        let mut chain2 = BlockChain { node_blocks: blocks2, chain_dir: String::default() };
 
         assert_eq!(chain1, chain2);
 
